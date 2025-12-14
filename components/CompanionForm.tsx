@@ -1,4 +1,6 @@
 "use client"
+
+import { createCompanion } from "@/lib/actions/companions.actions"
 import { subjects } from "@/constants"
 import Link from "next/link"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -23,6 +25,7 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "./ui/textarea"
+import { redirect } from "next/navigation"
  
 
 const formSchema = z.object({
@@ -44,14 +47,20 @@ const CompanionForm = () => {
       topic: '',
       voice: '',
       style: '',
-      duration: undefined,
+      duration: 15,
 
     },
   })
  
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    console.log(values)
+  const onSubmit = async(values: z.infer<typeof formSchema>) => {
+    const companion = await createCompanion(values);
+    if(companion){
+      redirect(`/companions/${companion.id}`);
+    }else{
+      console.log("Failed to creating companion");
+      redirect('/');
+    }
   }
 
   return(
@@ -103,7 +112,7 @@ const CompanionForm = () => {
 
          <FormField
           control={form.control}
-          name="name"
+          name="topic"
           render={({ field }) => (
             <FormItem>
               <FormLabel>What should the companion help with?</FormLabel>
