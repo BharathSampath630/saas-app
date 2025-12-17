@@ -47,7 +47,7 @@ const CompanionForm = () => {
       topic: '',
       voice: '',
       style: '',
-      duration: 15,
+      duration: '' as unknown as number,
 
     },
   })
