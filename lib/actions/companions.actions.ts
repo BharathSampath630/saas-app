@@ -40,6 +40,7 @@ export const getCompanion = async(id:string) =>{
 
     const {data,error} = await supabase.from('companions').select().eq('id',id);
     if(error) return console.log(error);
+    console.log('Companion data:', data[0]);
     return data[0];
 }
 
@@ -159,12 +160,14 @@ export const getUserSessions = async(userId:string,limit = 10) =>{
 
 export const getUserCompanions = async(userId:string) =>{
     const supabase = createSupabaseClient();
+    console.log('Getting companions for user ID:', userId);
     const {data,error} = await supabase.from('companions').select()
     .eq('author',userId)
     .order('created_at',{ascending:false});
 
     if(error) throw new Error(error.message);
-
+    
+    console.log('Found companions:', data?.length || 0);
     return data;
 }
 

@@ -1,10 +1,12 @@
 import { getCompanion } from "@/lib/actions/companions.actions";
 import { getSubjectColor } from "@/lib/utils";
 import { currentUser } from "@clerk/nextjs/server";
+import { auth } from "@clerk/nextjs/server";
 import {redirect} from "next/navigation";
 import Image from "next/image";
 import CompanionComponent from "@/components/CompanionComponent";
 import DeleteCompanionButton from "@/components/DeleteCompanionButton";
+import QuizSection from "@/components/QuizSection";
 
 interface CompanionSessionPageProps{
   params:Promise<{id:string}>;
@@ -16,12 +18,17 @@ const CompanionSession = async({params}:CompanionSessionPageProps) => {
   const {id} = await params;
   const companion = await getCompanion(id);
   const user = await currentUser();
+  const {has} = await auth();
   const{name,subject,title,topic,duration,author} = companion;
   if(!user) redirect('/sign-in');
   if(!name) redirect('/companions');
   
   // Check if current user is the author of this companion
+  console.log('User ID:', user.id, 'Author:', author, 'Match:', user.id === author);
   const isOwner = user.id === author;
+  
+  // Check if user has pro or core learner subscription (quiz access)
+  const hasQuizAccess = has({plan:'pro'}) || has({plan:'core'}) || false;
   return (
     <main>
       <article className="flex rounded-border justify-between p-6 max-md:flex-col">
@@ -56,6 +63,13 @@ const CompanionSession = async({params}:CompanionSessionPageProps) => {
           )}
         </div>
       </article>
+
+      <QuizSection 
+        subject={subject}
+        topic={topic}
+        isProUser={hasQuizAccess}
+      />
+      
       <CompanionComponent
         {...companion}
         companionId={id}
