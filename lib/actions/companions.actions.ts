@@ -52,7 +52,88 @@ export const addToSessionHistory = async(companionId:string) =>{
 
     if(error) throw new Error(error.message);
 
+    // Update user streak after completing a session
+    await updateUserStreak(userId!);
+
     return data
+}
+
+export const getUserStreak = async(userId:string) =>{
+    const supabase = createSupabaseClient();
+    
+    const {data,error} = await supabase
+        .from('user_streaks')
+        .select('*')
+        .eq('user_id',userId)
+        .single();
+
+    if(error && error.code !== 'PGRST116') { // PGRST116 is "not found" error
+        throw new Error(error.message);
+    }
+
+    if(!data) {
+        // Create initial streak record
+        const {data:newStreak,error:createError} = await supabase
+            .from('user_streaks')
+            .insert({
+                user_id: userId,
+                current_streak: 0,
+                longest_streak: 0,
+                last_activity_date: null
+            })
+            .select()
+            .single();
+
+        if(createError) throw new Error(createError.message);
+        return newStreak;
+    }
+
+    return data;
+}
+
+export const updateUserStreak = async(userId:string) =>{
+    const supabase = createSupabaseClient();
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+    
+    const streak = await getUserStreak(userId);
+    
+    // If user already completed a lesson today, don't update streak
+    if(streak.last_activity_date === today) {
+        return streak;
+    }
+
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+    let newCurrentStreak = 1;
+    
+    // If last activity was yesterday, increment streak
+    if(streak.last_activity_date === yesterdayStr) {
+        newCurrentStreak = streak.current_streak + 1;
+    }
+    // If last activity was today, keep current streak (shouldn't happen due to check above)
+    else if(streak.last_activity_date === today) {
+        newCurrentStreak = streak.current_streak;
+    }
+    // If last activity was more than 1 day ago, reset streak to 1
+
+    const newLongestStreak = Math.max(streak.longest_streak, newCurrentStreak);
+
+    const {data,error} = await supabase
+        .from('user_streaks')
+        .update({
+            current_streak: newCurrentStreak,
+            longest_streak: newLongestStreak,
+            last_activity_date: today
+        })
+        .eq('user_id',userId)
+        .select()
+        .single();
+
+    if(error) throw new Error(error.message);
+    
+    return data;
 }
 
 export const getRecentSession = async(limit = 10) =>{
@@ -85,6 +166,31 @@ export const getUserCompanions = async(userId:string) =>{
     if(error) throw new Error(error.message);
 
     return data;
+}
+
+export const deleteCompanion = async(id:string) =>{
+    const {userId} = await auth();
+    const supabase = createSupabaseClient();
+
+    // First check if the user owns this companion
+    const {data:companion,error:fetchError} = await supabase
+        .from('companions')
+        .select('author')
+        .eq('id',id)
+        .single();
+
+    if(fetchError) throw new Error(fetchError.message);
+    if(companion.author !== userId) throw new Error("Unauthorized to delete this companion");
+
+    // Delete the companion
+    const {error} = await supabase
+        .from('companions')
+        .delete()
+        .eq('id',id);
+
+    if(error) throw new Error(error.message);
+
+    return {success: true};
 }
 
 export const newCompanionPermissions = async() =>{

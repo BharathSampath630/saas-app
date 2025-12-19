@@ -5,7 +5,8 @@ import { cn } from "@/lib/utils"
 const navItems = [
     {label:'Home',href:'/'},
     {label:'Companions',href:'/companions'},
-    {label:'My Journey',href:'/my-journey'}
+    {label:'My Journey',href:'/my-journey'},
+    {label:'Subscription',href:'/subscription'}
 ]
 const NavItems = () => {
     const pathname = usePathname();

@@ -4,11 +4,12 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
-import { getUserCompanions, getUserSessions } from "@/lib/actions/companions.actions";
+import { getUserCompanions, getUserSessions, getUserStreak } from "@/lib/actions/companions.actions";
 import { currentUser } from "@clerk/nextjs/server"
 import {redirect} from "next/navigation"
 import Image from "next/image";
 import CompanionsList from "@/components/CompanionsList";
+import StreakCard from "@/components/StreakCard";
 
 const Profile = async() => {
   const user = await currentUser();
@@ -16,6 +17,7 @@ const Profile = async() => {
 
   const companions = await getUserCompanions(user.id);
   const sessionHistory = await getUserSessions(user.id);
+  const userStreak = await getUserStreak(user.id);
 
 
 
@@ -32,7 +34,7 @@ const Profile = async() => {
             </div>
         </div>
 
-        <div className="flex gap-4">
+        <div className="flex gap-4 max-sm:flex-col max-sm:w-full">
           <div className="border border-black rounded-lg p-3 gap-2 flex flex-col h-fit">
             <div className="flex gap-2 items-center">
               <Image src = "/icons/check.svg" alt = "checkmark" width = {22} height = {22}/>
@@ -49,6 +51,15 @@ const Profile = async() => {
             <div>Companions Created</div>
           </div>
         </div>
+      </section>
+
+      {/* Streak Section */}
+      <section className="my-6">
+        <StreakCard 
+          currentStreak={userStreak.current_streak}
+          longestStreak={userStreak.longest_streak}
+          lastActivityDate={userStreak.last_activity_date}
+        />
       </section>
       <Accordion type="multiple">
           <AccordionItem value="recent">
