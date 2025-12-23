@@ -6,7 +6,8 @@ const nextConfig: NextConfig = {
     remotePatterns:[
       {hostname:'img.clerk.com'}
     ]
-  }
+  },
+  outputFileTracingRoot: __dirname
 };
 
 export default withSentryConfig(nextConfig, {

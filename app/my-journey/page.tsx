@@ -5,25 +5,49 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion"
 import { getUserCompanions, getUserSessions, getUserStreak } from "@/lib/actions/companions.actions";
+import { getProAnalytics } from "@/lib/actions/analytics.actions";
 import { currentUser } from "@clerk/nextjs/server"
+import { auth } from "@clerk/nextjs/server"
 import {redirect} from "next/navigation"
 import Image from "next/image";
 import CompanionsList from "@/components/CompanionsList";
 import StreakCard from "@/components/StreakCard";
+import ProDashboard from "@/components/ProDashboard";
+import Link from "next/link";
 
 const Profile = async() => {
   const user = await currentUser();
   if(!user) redirect('/sign-in');
 
+  const { has } = await auth();
+  const isProUser = has({plan:'pro'}) || false;
+
   const companions = await getUserCompanions(user.id);
   const sessionHistory = await getUserSessions(user.id);
   const userStreak = await getUserStreak(user.id);
+
+  // Get Pro analytics if user is Pro Companion
+  let proAnalytics = null;
+  if (isProUser) {
+    proAnalytics = await getProAnalytics(user.id);
+  }
 
 
 
   return (
     <main className="min-lg:w-3/4">
-      <section className="flex justify-between gap-4 max-sm:flex-col items-center">
+      {/* My Learning Journey - Always at top */}
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+          📊 My Learning Journey
+          {isProUser && (
+            <span className="text-sm bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
+              Pro Companion
+            </span>
+          )}
+        </h2>
+        
+        <section className="flex justify-between gap-4 max-sm:flex-col items-center">
         <div className="flex gap-4 items-center">
           <Image src = {user.imageUrl} alt = {user.firstName!} 
             width={110} height={110}
@@ -61,6 +85,7 @@ const Profile = async() => {
           lastActivityDate={userStreak.last_activity_date}
         />
       </section>
+      
       <Accordion type="multiple">
           <AccordionItem value="recent">
             <AccordionTrigger className="text-2xl font-bold">Recent Sessions</AccordionTrigger>
@@ -79,6 +104,44 @@ const Profile = async() => {
             </AccordionContent>
           </AccordionItem>
         </Accordion>
+      </div>
+
+      {/* Pro Dashboard for Pro Companion users */}
+      {isProUser && proAnalytics && (
+        <div className="mt-8 pt-8 border-t border-gray-200">
+          <ProDashboard userId={user.id} userStats={proAnalytics} />
+        </div>
+      )}
+
+      {/* Upgrade Banner for Free/Core Users */}
+      {!isProUser && (
+        <div className="mt-8 p-6 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-lg text-white">
+          <div className="flex items-center justify-between max-md:flex-col max-md:gap-4">
+            <div>
+              <h2 className="text-2xl font-bold mb-2">🚀 Unlock Pro Analytics Dashboard</h2>
+              <p className="text-purple-100">
+                Get advanced insights, AI-powered recommendations, and detailed performance analytics
+              </p>
+              <div className="flex gap-4 mt-3 text-sm">
+                <span className="flex items-center gap-1">
+                  ✨ Learning velocity tracking
+                </span>
+                <span className="flex items-center gap-1">
+                  🧠 AI insights & predictions
+                </span>
+                <span className="flex items-center gap-1">
+                  📊 Subject mastery analysis
+                </span>
+              </div>
+            </div>
+            <Link href="/subscription">
+              <button className="px-6 py-3 bg-white text-purple-600 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+                Upgrade to Pro Companion
+              </button>
+            </Link>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
