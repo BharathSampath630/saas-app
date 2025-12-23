@@ -1,6 +1,5 @@
 import { createSupabaseClient } from '@/lib/supabase';
 import { auth } from '@clerk/nextjs/server';
-import { generateDemoAnalytics } from '@/lib/demo-data';
 
 export interface UserAnalytics {
   totalSessions: number;
@@ -43,7 +42,33 @@ export const getProAnalytics = async (userId: string): Promise<UserAnalytics> =>
 
     // Only use demo data if user has absolutely no sessions
     if (!sessions || sessions.length === 0) {
-      return generateDemoAnalytics(userId);
+      // Return minimal default data instead of demo data
+      return {
+        totalSessions: 0,
+        totalMinutes: 0,
+        averageScore: 0,
+        currentStreak: 0,
+        longestStreak: 0,
+        companionsCreated: 0,
+        subjectsStudied: [],
+        weeklyProgress: [0, 0, 0, 0, 0, 0, 0],
+        monthlyProgress: [],
+        topSubjects: [],
+        recentAchievements: [{
+          title: "Getting Started",
+          description: "Welcome to your learning journey!",
+          date: new Date().toLocaleDateString(),
+          icon: "🚀"
+        }],
+        learningVelocity: 0,
+        consistencyScore: 0,
+        masteryLevel: {},
+        predictedGoals: [{
+          goal: "Complete your first learning session",
+          probability: 100,
+          timeframe: "Today"
+        }]
+      };
     }
 
     // Get user companions

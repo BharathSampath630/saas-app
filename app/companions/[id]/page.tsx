@@ -1,4 +1,5 @@
 import { getCompanion } from "@/lib/actions/companions.actions";
+import { isCompanionBookmarked } from "@/lib/actions/bookmarks.actions";
 import { getSubjectColor } from "@/lib/utils";
 import { currentUser } from "@clerk/nextjs/server";
 import { auth } from "@clerk/nextjs/server";
@@ -6,6 +7,7 @@ import {redirect} from "next/navigation";
 import Image from "next/image";
 import CompanionComponent from "@/components/CompanionComponent";
 import DeleteCompanionButton from "@/components/DeleteCompanionButton";
+import BookmarkButton from "@/components/BookmarkButton";
 import QuizSection from "@/components/QuizSection";
 
 interface CompanionSessionPageProps{
@@ -29,6 +31,19 @@ const CompanionSession = async({params}:CompanionSessionPageProps) => {
   
   // Check if user has pro or core learner subscription (quiz access)
   const hasQuizAccess = has({plan:'pro'}) || has({plan:'core'}) || false;
+  
+  // Check if user has bookmark access
+  const hasBookmarkAccess = has({plan:'core'}) || has({plan:'pro'}) || false;
+  
+  // Check if companion is bookmarked
+  let isBookmarked = false;
+  if (hasBookmarkAccess) {
+    try {
+      isBookmarked = await isCompanionBookmarked(user.id, id);
+    } catch (error) {
+      console.error('Error checking bookmark status:', error);
+    }
+  }
   return (
     <main>
       <article className="flex rounded-border justify-between p-6 max-md:flex-col">
@@ -52,8 +67,15 @@ const CompanionSession = async({params}:CompanionSessionPageProps) => {
           </div>
         </div>
         <div className="flex flex-col items-end gap-3">
-          <div className="text-2xl max-md:hidden">
-            {duration} minutes
+          <div className="flex items-center gap-3">
+            <div className="text-2xl max-md:hidden">
+              {duration} minutes
+            </div>
+            <BookmarkButton 
+              companionId={id}
+              isBookmarked={isBookmarked}
+              hasBookmarkAccess={hasBookmarkAccess}
+            />
           </div>
           {isOwner && (
             <DeleteCompanionButton 

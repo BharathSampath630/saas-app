@@ -6,6 +6,7 @@ import {
 } from "@/components/ui/accordion"
 import { getUserCompanions, getUserSessions, getUserStreak } from "@/lib/actions/companions.actions";
 import { getProAnalytics } from "@/lib/actions/analytics.actions";
+import { getUserBookmarks } from "@/lib/actions/bookmarks.actions";
 import { currentUser } from "@clerk/nextjs/server"
 import { auth } from "@clerk/nextjs/server"
 import {redirect} from "next/navigation"
@@ -21,10 +22,21 @@ const Profile = async() => {
 
   const { has } = await auth();
   const isProUser = has({plan:'pro'}) || false;
+  const hasBookmarkAccess = has({plan:'core'}) || has({plan:'pro'}) || false;
 
   const companions = await getUserCompanions(user.id);
   const sessionHistory = await getUserSessions(user.id);
   const userStreak = await getUserStreak(user.id);
+  
+  // Get bookmarked companions if user has access
+  let bookmarkedCompanions: any[] = [];
+  if (hasBookmarkAccess) {
+    try {
+      bookmarkedCompanions = await getUserBookmarks(user.id);
+    } catch (error) {
+      console.error('Error fetching bookmarks:', error);
+    }
+  }
 
   // Get Pro analytics if user is Pro Companion
   let proAnalytics = null;
@@ -87,6 +99,17 @@ const Profile = async() => {
       </section>
       
       <Accordion type="multiple">
+          {hasBookmarkAccess && bookmarkedCompanions.length > 0 && (
+            <AccordionItem value="bookmarks">
+              <AccordionTrigger className="text-2xl font-bold">
+                📌 Bookmarked Companions {`(${bookmarkedCompanions.length})`}
+              </AccordionTrigger>
+              <AccordionContent>
+                <CompanionsList title="Bookmarked Companions" companions={bookmarkedCompanions}/>
+              </AccordionContent>
+            </AccordionItem>
+          )}
+          
           <AccordionItem value="recent">
             <AccordionTrigger className="text-2xl font-bold">Recent Sessions</AccordionTrigger>
             <AccordionContent>
