@@ -7,12 +7,19 @@ import SubjectFilter from "@/components/SubjectFilter";
 import SearchInput from "@/components/SearchInput";
 import { currentUser } from "@clerk/nextjs/server";
 import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 const CompanionsLibrary = async ({searchParams}:SearchParams) => {
   const filters = await searchParams;
   const subject = filters.subject ? filters.subject : '';
   const topic = filters.topic ? filters.topic : '';
 
   const user = await currentUser();
+  
+  // Redirect to sign-in if user is not authenticated
+  if (!user) {
+    redirect('/sign-in');
+  }
+  
   const { has } = await auth();
   
   // Check if user has bookmark access (Core Learner or Pro Companion)
@@ -20,9 +27,9 @@ const CompanionsLibrary = async ({searchParams}:SearchParams) => {
   
   const companions = await getAllCompanions({subject,topic});
   
-  // Get user's bookmarked companions if they have access and are logged in
+  // Get user's bookmarked companions if they have access
   let bookmarkedIds: string[] = [];
-  if (user && hasBookmarkAccess) {
+  if (hasBookmarkAccess) {
     try {
       bookmarkedIds = await getBookmarkedCompanionIds(user.id);
     } catch (error) {
@@ -45,7 +52,7 @@ const CompanionsLibrary = async ({searchParams}:SearchParams) => {
   return (
     <main>
       <section className="flex justify-between gap-4 max-sm:flex-col">
-        <h1>Companion Library</h1>
+        <h1>My Companions</h1>
         <div className="flex gap-4">
           <SearchInput />
           <SubjectFilter />
@@ -69,47 +76,68 @@ const CompanionsLibrary = async ({searchParams}:SearchParams) => {
         </div>
       )}
       
-      {/* Bookmarked Companions Section */}
-      {hasBookmarkAccess && bookmarkedIds.length > 0 && (
+      {companions.length === 0 ? (
+        <section className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="text-6xl mb-4">🤖</div>
+          <h2 className="text-2xl font-bold mb-2">No Companions Found</h2>
+          <p className="text-gray-600 mb-6">
+            {(subject || topic) 
+              ? "No companions match your search criteria. Try adjusting your filters."
+              : "You haven't created any companions yet. Create your first AI learning companion!"
+            }
+          </p>
+          <a 
+            href="/companions/new" 
+            className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors font-medium"
+          >
+            Create New Companion
+          </a>
+        </section>
+      ) : (
         <>
-          <div className="mb-6">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-              📌 Bookmarked Companions ({bookmarkedIds.length})
-            </h2>
-            <section className="companions-grid">
-              {sortedCompanions
-                .filter(companion => bookmarkedIds.includes(companion.id))
-                .map((companion) => (
-                  <CompanionsCard 
-                    key={companion.id} 
-                    {...companion} 
-                    color={getSubjectColor(companion.subject)}
-                    isBookmarked={true}
-                    hasBookmarkAccess={hasBookmarkAccess}
-                  />
-                ))}
-            </section>
-          </div>
+          {/* Bookmarked Companions Section */}
+          {hasBookmarkAccess && bookmarkedIds.length > 0 && (
+            <>
+              <div className="mb-6">
+                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                  📌 Bookmarked Companions ({bookmarkedIds.length})
+                </h2>
+                <section className="companions-grid">
+                  {sortedCompanions
+                    .filter(companion => bookmarkedIds.includes(companion.id))
+                    .map((companion) => (
+                      <CompanionsCard 
+                        key={companion.id} 
+                        {...companion} 
+                        color={getSubjectColor(companion.subject)}
+                        isBookmarked={true}
+                        hasBookmarkAccess={hasBookmarkAccess}
+                      />
+                    ))}
+                </section>
+              </div>
+              
+              <div className="mb-4">
+                <h2 className="text-xl font-bold mb-4">All My Companions</h2>
+              </div>
+            </>
+          )}
           
-          <div className="mb-4">
-            <h2 className="text-xl font-bold mb-4">All Companions</h2>
-          </div>
+          <section className="companions-grid">
+            {sortedCompanions
+              .filter(companion => !bookmarkedIds.includes(companion.id))
+              .map((companion) => (
+                <CompanionsCard 
+                  key={companion.id} 
+                  {...companion} 
+                  color={getSubjectColor(companion.subject)}
+                  isBookmarked={false}
+                  hasBookmarkAccess={hasBookmarkAccess}
+                />
+              ))}
+          </section>
         </>
       )}
-      
-      <section className="companions-grid">
-        {sortedCompanions
-          .filter(companion => !bookmarkedIds.includes(companion.id))
-          .map((companion) => (
-            <CompanionsCard 
-              key={companion.id} 
-              {...companion} 
-              color={getSubjectColor(companion.subject)}
-              isBookmarked={false}
-              hasBookmarkAccess={hasBookmarkAccess}
-            />
-          ))}
-      </section>
     </main>
   )
 }

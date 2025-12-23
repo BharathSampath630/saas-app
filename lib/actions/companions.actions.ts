@@ -15,9 +15,12 @@ export const createCompanion = async(formData:CreateCompanion) =>{
 }
 
 export const getAllCompanions = async({limit = 10,page = 1,subject,topic}:GetAllCompanions) =>{
+    const {userId} = await auth();
+    if (!userId) throw new Error('User not authenticated');
+    
     const supabase = createSupabaseClient();
 
-    let query = supabase.from('companions').select();
+    let query = supabase.from('companions').select().eq('author', userId);
     if(subject && topic){
         query = query.ilike('subject',`%${subject}%`).or(`topic.ilike.%${topic}%,name.ilike.%${topic}%`);
     } else if(subject){
